@@ -12,6 +12,15 @@ CITIES = ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth"]
 #WEATHER_API = "https://api.openweathermap.org/data/2.5/weather?q=London&appid=c45640f19f871edb471d843c64487f20"
 CACHE_KEY = "weather_data"
 
+# Initialize cache performance counters
+CACHE_HIT_KEY = "cache_hit_count"
+CACHE_MISS_KEY = "cache_miss_count"
+
+# Initialize cache performance counters
+cache.set(CACHE_HIT_KEY, 0)
+cache.set(CACHE_MISS_KEY, 0)
+
+
 def fetch_weather_data(city):
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid=c45640f19f871edb471d843c64487f20"
     response = requests.get(url)
@@ -48,23 +57,31 @@ for city in CITIES:
 
 #Main function to retrieve weather data from cache
 def get_weather_data(city):
-    data = cache.get(CACHE_KEY)
+    data = cache.get(city)
     if data is None:
-        print("Cache miss - fetching new data")
+        print("Cache miss for {city} - fetching new data")
         fetch_weather_data(city)
         data = cache.get(city)
+        cache.incr(CACHE_MISS_KEY)
     else:
-        print("Cache hit")
+        print("Cache hit for {city}")
+        cache.incr(CACHE_HIT_KEY) #increment hit counter
     
     # format new data
     data = json.loads(data)
     return f"Weather in {data['city']}: {data['temperature']} degrees C, {data['description']}"
 
+def display_cache_perfomance():
+    cache_hits = cache.get(CACHE_HIT_KEY)
+    cache_misses = cache.get(CACHE_MISS_KEY)
+    print(f"\nCache Performance: Hits = {cache_hits}, Misses = {cache_misses}\n")
 
+#simulate application running and displaying data for each city
 try:
     while True:
         for city in CITIES:
              print(get_weather_data(city))
         time.sleep(60)
+        display_cache_perfomance()
 except (keyboardInterrupt, SystemExit):
     scheduler.shutdown()
